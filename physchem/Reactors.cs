@@ -175,4 +175,42 @@ namespace physchem
             TimeStamps[i + 1] = CurrentTime;
         }
     }
+
+    class ReactorForNumericAdsorption : CourseReactor
+    {
+        public double SurfaceArea;
+        public double InitialConcentrationOfSites;
+        public double ReactorVolume;
+        public double VolumeFlowRate;
+        public double InitialAdsorbateConcentration;
+        public double InitialOccupiedSitesFraction;
+
+        protected override int Initialize(double duration)
+        {
+            var data = AdsorbateConcentration;
+            int len = base.Initialize(duration);
+            if (data.Length < len) throw new ArgumentOutOfRangeException();
+            AdsorbateConcentration = data;
+            return len;
+        }
+
+        protected override void PerformStep(int i, double timeStep)
+        {
+            //Compute C'(t)
+            double cPrime = (AdsorbateConcentration[i + 1] - AdsorbateConcentration[i]) / timeStep;
+            //Compute A'(t)
+            double aPrime = -1 / (SurfaceArea * InitialConcentrationOfSites) *
+                (ReactorVolume * cPrime - VolumeFlowRate * (InitialAdsorbateConcentration - AdsorbateConcentration[i]));
+            //Compute linear change
+            OccupiedSiteFraction[i + 1] = OccupiedSiteFraction[i] + aPrime * timeStep;
+            //Compute time
+            CurrentTime += timeStep;
+            TimeStamps[i + 1] = CurrentTime;
+        }
+
+        protected override void SetInitialConditions()
+        {
+            OccupiedSiteFraction[0] = InitialOccupiedSitesFraction;
+        }
+    }
 }
